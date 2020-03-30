@@ -58,7 +58,7 @@ app.use(
 router.post('/', datalize([
 	field('name').trim().required(),
 	field('email').required().email(),
-]), (ctx) => {
+]), async (ctx) => {
 	if (!ctx.form.isValid) {
 		return ctx.error(400, {errors: ctx.form.errors});
 	}
@@ -76,7 +76,7 @@ router.post('/', datalize.query([
 	field('keywords').trim(),
 	field('page').default(1).number(),
 	field('perPage').required().select([10, 30, 50]),
-]), (ctx) => {
+]), async (ctx) => {
 	const limit = ctx.data.perPage;
 	const where = {
 	};
@@ -183,7 +183,23 @@ router.patch('/:id', userEditMiddleware, userValidator, async (ctx) => {
 	
 	ctx.body = ctx.user.toJSON();
 });
-ƒ
+
+field.prototype.date = function(format = 'YYYY-MM-DD') {
+    return this.add(function(value) {
+      const date = value ? moment(value, format) : null;
+  
+      if (!date || !date.isValid()) {
+        throw new Error('%s is not a valid date.');
+      }
+  
+      return date.format(format);
+    });
+  };
+  
+field.prototype.dateTime = function(format = 'YYYY-MM-DD HH:mm') {
+return this.date(format);
+};
+
 // connect defined routes as middleware to Koa
 app.use(router.routes());
 // our app will listen on port 3000
