@@ -8,6 +8,12 @@ const router = new (require('koa-router'))();
 const field = datalize.field;
 const DOMAIN_ERROR = "Email's domain does not have a valid MX (mail) entry in its DNS record";
 
+const userValidator = datalize([
+	field('name').patch().trim().required(),
+	field('email').patch().required().email(),
+	field('type').patch().required().select(['admin', 'user']),
+]);
+
 // set datalize to throw an error if validation fails
 datalize.set('autoValidate', true);
 
@@ -130,6 +136,54 @@ router.post('/', datalize([
     })));
 });
 
+const userEditMiddleware = async (ctx, next) => {
+	const user = await User.findByPk(ctx.params.id);
+	
+	// cancel request here if user was not found
+	if (!user) {
+		throw new Error('User was not found.');
+	}
+	
+	// store user instance in the request so we can use it later
+	ctx.user = user;
+	
+	return next();
+};
+
+/**
+ * @api {post} / Create a user
+ * ...
+ */
+router.post('/', userValidator, async (ctx) => {
+	const user = await User.create(ctx.form);
+	
+	ctx.body = user.toJSON();
+});
+
+/**
+ * @api {put} / Update a user
+ * ...
+ */
+router.put('/:id', userEditMiddleware, userValidator, async (ctx) => {
+	await ctx.user.update(ctx.form);
+	
+	ctx.body = ctx.user.toJSON();
+});
+
+/**
+ * @api {patch} / Patch a user
+ * ...
+ */
+router.patch('/:id', userEditMiddleware, userValidator, async (ctx) => {
+	if (!Object.keys(ctx.form).length) {
+		return ctx.error(400, {message: 'Nothing to update.'});
+	}
+	
+	await ctx.user.update(ctx.form);
+	
+	ctx.body = ctx.user.toJSON();
+});
+ƒ
 // connect defined routes as middleware to Koa
 app.use(router.routes());
 // our app will listen on port 3000
