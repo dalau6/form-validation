@@ -2,10 +2,29 @@ const Koa = require('koa');
 const bodyParser = require('koa-body');
 const datalize = require('datalize');
 
-const field = datalize.field;
-
 const app = new Koa();
 const router = new (require('koa-router'))();
+
+const field = datalize.field;
+
+// set datalize to throw an error if validation fails
+datalize.set('autoValidate', true);
+
+// only Koa
+// add to very beginning of Koa middleware chain
+app.use(async (ctx, next) => {
+	try {
+		await next();
+	} catch (err) {
+		if (err instanceof datalize.Error) {
+			ctx.status = 400;
+			ctx.body = err.toJSON();
+		} else {
+			ctx.status = 500;
+			ctx.body = 'Internal server error';
+		}
+	}
+});
 
 // helper for returning errors in routes
 app.context.error = function(code, obj) {
@@ -40,6 +59,32 @@ router.post('/', datalize([
 	const user = await User.create(ctx.form);
 	
 	ctx.body = user.toJSON();
+});
+
+/**
+ * @api {get} / List users
+ * ...
+ */
+router.post('/', datalize.query([
+	field('keywords').trim(),
+	field('page').default(1).number(),
+	field('perPage').required().select([10, 30, 50]),
+]), (ctx) => {
+	const limit = ctx.data.perPage;
+	const where = {
+	};
+	
+	if (ctx.data.keywords) {
+		where.name = {[Op.like]: ctx.data.keywords + '%'};
+	}
+	
+	const users = await User.findAll({
+		where,
+		limit,
+		offset: (ctx.data.page - 1) * limit,
+	});
+	
+	ctx.body = users;
 });
 
 // connect defined routes as middleware to Koa
