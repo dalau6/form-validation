@@ -1,0 +1,26 @@
+{
+  "name": "form-validation",
+  "version": "1.0.0",
+  "description": "Smart Node.js Form Validation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dalau6/form-validation.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dalau6/form-validation/issues"
+  },
+  "homepage": "https://github.com/dalau6/form-validation#readme",
+  "dependencies": {
+    "datalize": "^0.3.4",
+    "koa": "^2.11.0",
+    "koa-body": "^4.1.1",
+    "koa-router": "^8.0.8"
+  }
+}
