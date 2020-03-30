@@ -6,6 +6,7 @@ const app = new Koa();
 const router = new (require('koa-router'))();
 
 const field = datalize.field;
+const DOMAIN_ERROR = "Email's domain does not have a valid MX (mail) entry in its DNS record";
 
 // set datalize to throw an error if validation fails
 datalize.set('autoValidate', true);
@@ -85,6 +86,48 @@ router.post('/', datalize.query([
 	});
 	
 	ctx.body = users;
+});
+
+/**
+ * @api {post} / Create a user
+ * ...
+ */
+router.post('/', datalize([
+	field('name').trim().required(),
+	field('email').required().email().custom((value) => {
+		return new Promise((resolve, reject) => {
+			dns.resolve(value.split('@')[1], 'MX', function(err, addresses) {
+				if (err || !addresses || !addresses.length) {
+					return reject(new Error(DOMAIN_ERROR));
+				}
+				
+				resolve();
+			});
+		});
+	}),
+	field('type').required().select(['admin', 'user']),
+	field('languages').array().container([
+		field('id').required().id(),
+		field('level').required().select(['beginner', 'intermediate', 'advanced'])
+	]),
+	field('groups').array().id(),
+]), async (ctx) => {
+	const {languages, groups} = ctx.form;
+	delete ctx.form.languages;
+	delete ctx.form.groups;
+	
+	const user = await User.create(ctx.form);
+	
+	await UserGroup.bulkCreate(groups.map(groupId => ({
+		groupId,
+		userId: user.id,
+	})));
+	
+	await UserLanguage.bulkCreate(languages.map(item => ({
+		languageId: item.id,
+		userId: user.id,
+        level: item.level,
+    })));
 });
 
 // connect defined routes as middleware to Koa
